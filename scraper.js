@@ -1,5 +1,6 @@
 require('dotenv').config();
 const puppeteer = require('puppeteer');
+const chromium = require('chromium');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
 
@@ -7,10 +8,11 @@ const getTimeAgo = require('./helpers');
 
 const scrapeJobsAndNotify = async () => {
     const browser = await puppeteer.launch({
-        executablePath: '/opt/render/.cache/puppeteer/chrome-linux/chrome',
+        executablePath: chromium.path, // Use the Chromium path from the package
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for restricted environments like Render
     });
+
     const page = await browser.newPage();
 
     try {
