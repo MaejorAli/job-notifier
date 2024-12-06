@@ -6,7 +6,10 @@ const nodemailer = require('nodemailer');
 const getTimeAgo = require('./helpers');
 
 const scrapeJobsAndNotify = async () => {
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({
+        headless: true, // Ensure it runs in headless mode
+        args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for Render
+    });
     const page = await browser.newPage();
 
     try {
