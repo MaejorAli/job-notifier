@@ -7,8 +7,9 @@ const getTimeAgo = require('./helpers');
 
 const scrapeJobsAndNotify = async () => {
     const browser = await puppeteer.launch({
-        headless: true, // Ensure it runs in headless mode
-        args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for Render
+        executablePath: '/opt/render/.cache/puppeteer/chrome-linux/chrome',
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
     const page = await browser.newPage();
 
