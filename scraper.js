@@ -3,6 +3,8 @@ const puppeteer = require('puppeteer');
 const chromium = require('chromium');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
+const cron = require('node-cron');
+
 
 const getTimeAgo = require('./helpers');
 
@@ -109,4 +111,11 @@ const sendEmailNotification = async (jobList) => {
     await transporter.sendMail(mailOptions);
 };
 
-scrapeJobsAndNotify();
+
+// Schedule the scraper to run every 3 hours
+cron.schedule('0 */3 * * *', async () => {
+    console.log('Running scraper job...');
+    await scrapeJobsAndNotify();
+  });
+  
+
