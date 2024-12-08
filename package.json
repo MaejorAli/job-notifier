@@ -4,6 +4,7 @@
   "description": "",
   "main": "scraper.js",
   "scripts": {
+    "build": "npm install",
     "start": "node scraper.js"
   },
   "keywords": [],

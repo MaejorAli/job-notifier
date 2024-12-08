@@ -112,10 +112,8 @@ const sendEmailNotification = async (jobList) => {
 };
 
 
-// Schedule the scraper to run every 3 hours
-cron.schedule('0 */3 * * *', async () => {
-    console.log('Running scraper job...');
-    await scrapeJobsAndNotify();
-  });
+
+scrapeJobsAndNotify();
+
   
 
