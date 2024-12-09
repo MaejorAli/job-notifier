@@ -24,7 +24,7 @@ jobs:
         run: npx puppeteer install
 
       - name: Debug environment
-        run: echo "WEBSITE URL: $WEBSITE_URL"
+        run: echo "Website URL= $WEBSITE_URL"
         env:
           WEBSITE_URL: ${{ secrets.WEBSITE_URL }}  
 
