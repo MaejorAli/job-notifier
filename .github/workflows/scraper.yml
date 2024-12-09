@@ -21,4 +21,13 @@ jobs:
         run: npm install
 
       - name: Run scraper
+        env:
+          APIURL: ${{ secrets.APIURL }}
+          EMAIL: ${{ secrets.EMAIL }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+
         run: node scraper.js
