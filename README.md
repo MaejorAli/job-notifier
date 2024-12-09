@@ -1,4 +1,4 @@
-# Job Scraper with Email Notifications
+# Job Notifier with Email Notifications
 
 This project is a **Node.js** application that scrapes job listings from a website and sends periodic email notifications with the latest job listings. The application uses **Puppeteer** for web scraping and **Nodemailer** for sending emails. Additionally, it includes a cron job to execute the scraping process automatically at regular intervals.
 
