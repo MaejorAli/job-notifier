@@ -23,11 +23,11 @@ This project is a **Node.js** application that scrapes job listings from a websi
    cd job-scraper
 
 2. Install dependencies:
-
+   ```bash
    npm install
 
 3. Configure environment variables: Create a .env file in the root directory and add the following variables:
-
+   ```bash
    SMTP_USER=your-email@gmail.com
    SMTP_PASS=your-email-app-password
    RECEIVER_EMAIL=receiver-email@gmail.com
@@ -40,7 +40,7 @@ This project is a **Node.js** application that scrapes job listings from a websi
    - TARGET_URL: The URL of the website to scrape jobs from.   
 
 4. Run the application locally:
-
+   ```bash
    node scraper.js
 
 
@@ -52,28 +52,30 @@ This project is a **Node.js** application that scrapes job listings from a websi
    heroku login
 
 2. **Create a New Heroku App**
-
+   ```bash
    heroku create
 
 3. **Add the required environment variables to Heroku**
-
+   ```bash
    heroku config:set SMTP_USER=your-email@gmail.com SMTP_PASS=your-email-app-password RECEIVER_EMAIL=receiver-email@gmail.com TARGET_URL=https://example.com/login
 
 4. **Add a Procfile**
-
+   ```bash
    worker: node scraper.js
 
 5. **Push the Code to Heroku**
-
+   ```bash
    git push heroku main
 
 6. **Check Logs**
-
-  heroku logs --tail
+   ```bash
+   heroku logs --tail
 
 7. **Scale the Worker Dyno**
+   ```bash
+   heroku ps:scale worker=1
 
-  heroku ps:scale worker=1
+
 
 
 
