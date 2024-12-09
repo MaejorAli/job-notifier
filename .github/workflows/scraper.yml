@@ -22,7 +22,7 @@ jobs:
       
       - name: Install Chromium
         run: npx puppeteer install
-        run: npm install chromium
+        
 
       - name: Debug environment
         run: echo "Website URL= $WEBSITE_URL"
