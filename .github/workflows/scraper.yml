@@ -19,6 +19,14 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+      
+      - name: Install Chromium
+        run: npx puppeteer install
+
+      - name: Debug environment
+        run: echo "WEBSITE URL: $WEBSITE_URL"
+        env:
+          WEBSITE_URL: ${{ secrets.WEBSITE_URL }}  
 
       - name: Run scraper
         env:
