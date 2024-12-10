@@ -57,8 +57,11 @@ const scrapeJobsAndNotify = async () => {
             headers: { Authorization: `Bearer ${authToken}` },
         });
 
-        const jobs = response.data.data;
+        let jobs = response.data.data;
         console.log(`Fetched ${jobs.length} jobs.`);
+
+        // Sort jobs by creation_date (newest first)
+        jobs = jobs.sort((a, b) => new Date(b.creation_date) - new Date(a.creation_date));
 
     
         // Format job data for email
