@@ -23,7 +23,7 @@ const scrapeJobsAndNotify = async () => {
         // Perform login
         await page.type('#email', process.env.USERNAME);
         await page.type('#password', process.env.PASSWORD);
-        await page.click('#__next > div > div.styles_layout__vooAi > div > div > form > button');
+        await page.click('#__next > div > div.styles_layout__KP___ > div > div > form > div.styles_buttonWrapper__ZzPaS > button');
         await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
         console.log('Logged in successfully!');
