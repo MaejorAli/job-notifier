@@ -2,56 +2,143 @@ require('dotenv').config();
 const puppeteer = require('puppeteer');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
+const imaps = require('imap-simple');
+const simpleParser = require('mailparser').simpleParser;
 const cron = require('node-cron');
-
-
 const getTimeAgo = require('./helpers');
+
+const getMagicLinkFromYahoo = async () => {
+    const config = {
+        imap: {
+            user: process.env.YAHOO_EMAIL,
+            password: process.env.YAHOO_PASSWORD,
+            host: 'imap.mail.yahoo.com',
+            port: 993,
+            tls: true,
+            authTimeout: 10000,
+        },
+    };
+
+    const connection = await imaps.connect(config);
+    await connection.openBox('INBOX');
+
+    const delay = 1 * 60 * 1000; // 1 minute
+    const formatDateForIMAP = date =>
+        date.toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(',', '');
+    const since = formatDateForIMAP(new Date(Date.now() - delay));
+
+    const searchCriteria = [
+        ['SINCE', since],
+        ['FROM', 'talent@andela.com'],
+        ['SUBJECT', 'Andela Login Link']
+    ];
+
+    const fetchOptions = {
+        bodies: [''],
+        markSeen: true
+    };
+
+    let messages;
+    try {
+        messages = await connection.search(searchCriteria, fetchOptions);
+        console.log(messages);
+    } catch (err) {
+        console.error('🔴 IMAP search failed:', err.message);
+        throw new Error('Failed to search Yahoo inbox.');
+    }
+
+    if (!messages.length) {
+        throw new Error('📭 No matching messages found in Yahoo inbox.');
+    }
+
+    for (const message of messages) {
+        const part = message.parts.find(p => p.which === '');
+        if (!part?.body) continue;
+
+        const parsed = await simpleParser(part.body);
+
+        if (parsed.html) {
+            // Look for the link with text "Access account"
+            const match = parsed.html.match(/<a[^>]+href="([^"]+)"[^>]*>Access account<\/a>/i);
+            if (match && match[1]) {
+                const url = match[1];
+                console.log('✅ Found magic link (tracking URL):', url);
+                return url;
+            }
+        }
+    }
+
+    throw new Error('Magic link not found in Yahoo inbox');
+};
 
 const scrapeJobsAndNotify = async () => {
     const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for restricted environments like Render
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
 
     try {
-        // Navigate to login page
         console.log(`Navigating to: ${process.env.WEBSITE_URL}`);
-        await page.goto(process.env.WEBSITE_URL, { waitUntil: 'networkidle2' });
+        await page.goto(process.env.WEBSITE_URL, { waitUntil: 'domcontentloaded' });
 
-        // Perform login
-        await page.type('#email', process.env.USERNAME);
-        await page.type('#password', process.env.PASSWORD);
-        await page.click('#__next > div > div.styles_layout__KP___ > div > div > form > div.styles_buttonWrapper__ZzPaS > button');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+        // Enter email to request magic link
+        await page.type('input[type=email]', process.env.USERNAME);
+        await page.click('button[type=submit]');
+        console.log('Magic link requested. Waiting for email...');
 
-        console.log('Logged in successfully!');
+        // Wait and retrieve magic link from Yahoo
+        const magicLink = await getMagicLinkFromYahoo();
         
-       
-        const authToken = await page.evaluate(() => {
-            // Retrieve the raw value
-            const rawValue = localStorage.getItem('okta-token-storage');
-            
-            if (!rawValue) {
-                throw new Error('Token storage not found in localStorage');
+
+        // Navigate to the magic link to login
+        await page.goto(magicLink, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        console.log('Navigating to magic link...');
+
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 });
+        console.log('✅ Login redirect complete!');
+
+        // Retrieve token
+        console.log('⌛ Waiting for login redirect to complete...');
+        await new Promise(resolve => setTimeout(resolve, 10000));// adjust timing if needed
+
+        // Get all open tabs/pages
+        const pages = await browser.pages();
+
+        let authToken = null;
+
+        for (const page of pages) {
+            try {
+                const url = page.url();
+                console.log(`🔍 Checking page: ${url}`);
+
+                const token = await page.evaluate(() => {
+                    return localStorage.getItem('talent-access-token');
+                });
+
+                if (token) {
+                    console.log('✅ Token found!');
+                    authToken = token;
+                    console.log('🎯 Auth token:', token);
+                    break;
+                }
+            } catch (error) {
+                console.warn('⚠️ Skipping page due to access restriction:', error.message);
+                continue; // Skip inaccessible pages
             }
-        
-            // Parse the JSON
-            const parsedValue = JSON.parse(rawValue);
-        
-            // Access the nested idToken
-            return parsedValue.idToken?.idToken || null;
-        });
-        
-        if (!authToken) {
-            throw new Error('Auth token not found in token storage');
         }
 
-        // Close Puppeteer browser
+        if (!authToken) {
+            throw new Error('❌ Auth token not found in any localStorage');
+        }
+
+
+        if (!authToken) throw new Error('Auth token not found');
+
         await browser.close();
 
-        // Fetch jobs via API using Axios
+        // Fetch jobs
         const apiUrl = process.env.APIURL;
         const response = await axios.get(apiUrl, {
             headers: { Authorization: `Bearer ${authToken}` },
@@ -60,61 +147,51 @@ const scrapeJobsAndNotify = async () => {
         let jobs = response.data.data;
         console.log(`Fetched ${jobs.length} jobs.`);
 
-        // Sort jobs by creation_date (newest first)
         jobs = jobs.sort((a, b) => new Date(b.creation_date) - new Date(a.creation_date));
 
-    
-        // Format job data for email
         const jobList = jobs.map(job => 
             `**${job.title}**\n` +
             `Company: ${job.company_name || 'N/A'}\n` +
             `Location: ${job.location || 'Remote'}\n` +
             `Applicants: ${job.applicants || 'N/A'}\n` +
             `Link: ${job.company_url || 'N/A'}\n` +
-            `Recommendation Rank: ${job.recommendation_rank || 'N/A'}\n` +
-            `Creation Date: ${getTimeAgo(job.creation_date)}\n\n`
+            `Rank: ${job.recommendation_rank || 'N/A'}\n` +
+            `Created: ${getTimeAgo(job.creation_date)}\n\n`
         ).join('');
 
         if (jobs.length > 0) {
-            // Send email notification
             await sendEmailNotification(jobList);
-            console.log('Email notification sent successfully!');
+            console.log('Email notification sent!');
         } else {
-            console.log('No jobs found to notify.');
+            console.log('No jobs found.');
         }
 
         return jobs;
+
     } catch (error) {
-        console.error('Error scraping jobs or sending email:', error);
+        console.error('Error scraping jobs:', error);
     } finally {
         await browser.close();
     }
 };
 
 const sendEmailNotification = async (jobList) => {
-    // Configure email transporter
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-            user: process.env.EMAIL, // Your email
-            pass: process.env.EMAIL_PASSWORD, // Your email password or app password
+            user: process.env.EMAIL,
+            pass: process.env.EMAIL_PASSWORD,
         },
     });
 
-    // Send the email
     const mailOptions = {
         from: `"Job Nest" <${process.env.EMAIL}>`,
-        to: process.env.NOTIFY_EMAIL, // Recipient email
-        subject: 'New Andela Job Listings Available!',
-        text: `Here are the latest job listings specially curated for Ali S. :\n\n${jobList}`,
+        to: process.env.NOTIFY_EMAIL,
+        subject: 'Latest Andela Jobs',
+        text: `Hi Ali,\n\nHere are your latest job leads:\n\n${jobList}`,
     };
 
     await transporter.sendMail(mailOptions);
 };
 
-
-
 scrapeJobsAndNotify();
-
-  
-
