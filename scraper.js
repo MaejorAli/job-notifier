@@ -101,7 +101,7 @@ const scrapeJobsAndNotify = async () => {
 
         // Retrieve token
         console.log('⌛ Waiting for login redirect to complete...');
-        await new Promise(resolve => setTimeout(resolve, 10000));// adjust timing if needed
+        await new Promise(resolve => setTimeout(resolve, 20000));// adjust timing if needed
 
         // Get all open tabs/pages
         const pages = await browser.pages();
