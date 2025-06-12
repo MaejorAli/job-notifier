@@ -38,5 +38,7 @@ jobs:
           WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_PASSWORD: ${{ secrets.YAHOO_PASSWORD }}
 
         run: node scraper.js
