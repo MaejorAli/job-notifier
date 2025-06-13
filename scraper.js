@@ -51,6 +51,9 @@ const getMagicLinkFromYahoo = async () => {
         throw new Error('📭 No matching messages found in Yahoo inbox.');
     }
 
+    messages.sort((a, b) => new Date(b.attributes.date) - new Date(a.attributes.date)); // newest first
+
+
     for (const message of messages) {
         const part = message.parts.find(p => p.which === '');
         if (!part?.body) continue;
