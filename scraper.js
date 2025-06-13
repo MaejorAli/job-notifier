@@ -88,6 +88,11 @@ const scrapeJobsAndNotify = async () => {
         await page.click('button[type=submit]');
         console.log('Magic link requested. Waiting for email...');
 
+        const delayMs = 1 * 60 * 1000; // 1 minute
+
+        console.log('⏳ Magic link requested. Waiting 1 minute before checking Yahoo inbox...');
+        await new Promise(resolve => setTimeout(resolve, delayMs)); // Wait 1 minute
+
         // Wait and retrieve magic link from Yahoo
         const magicLink = await getMagicLinkFromYahoo();
         
@@ -120,7 +125,6 @@ const scrapeJobsAndNotify = async () => {
                 if (token) {
                     console.log('✅ Token found!');
                     authToken = token;
-                    console.log('🎯 Auth token:', token);
                     break;
                 }
             } catch (error) {
