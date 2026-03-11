@@ -4,7 +4,6 @@ const axios = require('axios');
 const nodemailer = require('nodemailer');
 const imaps = require('imap-simple');
 const simpleParser = require('mailparser').simpleParser;
-const cron = require('node-cron');
 const getTimeAgo = require('./helpers');
 
 const getMagicLinkFromYahoo = async () => {
