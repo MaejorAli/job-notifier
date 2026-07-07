@@ -25,28 +25,10 @@ jobs:
         run: npx puppeteer install
         
 
-      - name: Convert Secret to Hex
+      - name: Debug environment
+        run: echo "Website URL= $WEBSITE_URL"
         env:
-          APIURL: ${{ secrets.APIURL }}
-          EMAIL: ${{ secrets.EMAIL }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
           WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
-          USERNAME: ${{ secrets.USERNAME }}
-          PASSWORD: ${{ secrets.PASSWORD }}
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_PASSWORD: ${{ secrets.YAHOO_PASSWORD }}
-        run: |
-          echo "Hex encoded value below:"
-          echo -n "$APIURL" | xxd -p
-          echo -n "$EMAIL" | xxd -p
-          echo -n "$EMAIL_PASSWORD" | xxd -p
-          echo -n "$NOTIFY_EMAIL" | xxd -p
-          echo -n "$WEBSITE_URL" | xxd -p
-          echo -n "$USERNAME" | xxd -p
-          echo -n "$PASSWORD" | xxd -p
-          echo -n "$YAHOO_EMAIL" | xxd -p
-          echo -n "$YAHOO_PASSWORD" | xxd -p
 
       - name: Run scraper
         env:
