@@ -28,8 +28,8 @@ const getMagicLinkFromYahoo = async () => {
 
     const searchCriteria = [
         ['SINCE', since],
-        ['FROM', 'talent@andela.com'],
-        ['SUBJECT', 'Andela Login Link']
+        ['FROM', 'hello@andela.com'],
+        ['SUBJECT', 'Log in to Andela']
     ];
 
     const fetchOptions = {
@@ -60,8 +60,8 @@ const getMagicLinkFromYahoo = async () => {
         const parsed = await simpleParser(part.body);
 
         if (parsed.html) {
-            // Look for the link with text "Access account"
-            const match = parsed.html.match(/<a[^>]+href="([^"]+)"[^>]*>Access account<\/a>/i);
+            // Look for the link with text "Log in to Andela"
+            const match = parsed.html.match(/<a[^>]+href="([^"]+)"[^>]*>Log in to Andela<\/a>/i);
             if (match && match[1]) {
                 const url = match[1];
                 console.log('✅ Found magic link (tracking URL):', url);
@@ -86,7 +86,11 @@ const scrapeJobsAndNotify = async () => {
         await page.goto(process.env.WEBSITE_URL, { waitUntil: 'domcontentloaded' });
 
         // Enter email to request magic link
-        await page.type('input[type=email]', process.env.USERNAME);
+        await page.waitForSelector('#email', {
+          visible: true,
+          timeout: 30000,
+        });
+        await page.type('#email', process.env.USERNAME);
         await page.click('button[type=submit]');
         console.log('Magic link requested. Waiting for email...');
 
@@ -113,56 +117,60 @@ const scrapeJobsAndNotify = async () => {
         // Get all open tabs/pages
         const pages = await browser.pages();
 
-        let authToken = null;
+        let sessionToken = null;
 
         for (const page of pages) {
             try {
-                const url = page.url();
-                console.log(`🔍 Checking page: ${url}`);
+                console.log(`🔍 Checking page: ${page.url()}`);
 
-                const token = await page.evaluate(() => {
-                    return localStorage.getItem('talent-access-token');
-                });
+                const cookies = await page.cookies();
 
-                if (token) {
-                    console.log('✅ Token found!');
-                    authToken = token;
+                const sessionCookie = cookies.find(
+                    cookie => cookie.name === '__session'
+                );
+
+                if (sessionCookie) {
+                    console.log('✅ __session cookie found!');
+                    sessionToken = sessionCookie.value;
                     break;
                 }
             } catch (error) {
-                console.warn('⚠️ Skipping page due to access restriction:', error.message);
-                continue; // Skip inaccessible pages
+                console.warn(`⚠️ Skipping page: ${error.message}`);
             }
         }
 
-        if (!authToken) {
-            throw new Error('❌ Auth token not found in any localStorage');
+        if (!sessionToken) {
+            throw new Error('❌ __session cookie not found');
         }
-
-
-        if (!authToken) throw new Error('Auth token not found');
 
         await browser.close();
 
         // Fetch jobs
         const apiUrl = process.env.APIURL;
         const response = await axios.get(apiUrl, {
-            headers: { Authorization: `Bearer ${authToken}` },
+            headers: { Authorization: `Bearer ${sessionToken}` },
         });
 
-        let jobs = response.data.data;
+        const { keys, items } = response.data;
+
+        // Convert each item array into an object
+        let jobs = items.map(item =>
+            Object.fromEntries(
+                keys.map((key, index) => [key, item[index]])
+            )
+        );
+
         console.log(`Fetched ${jobs.length} jobs.`);
 
-        jobs = jobs.sort((a, b) => new Date(b.creation_date) - new Date(a.creation_date));
+        jobs = jobs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         const jobList = jobs.map(job => 
             `**${job.title}**\n` +
-            `Company: ${job.company_name || 'N/A'}\n` +
-            `Location: ${job.location || 'Remote'}\n` +
-            `Applicants: ${job.applicants || 'N/A'}\n` +
-            `Link: ${job.company_url || 'N/A'}\n` +
-            `Rank: ${job.recommendation_rank || 'N/A'}\n` +
-            `Created: ${getTimeAgo(job.creation_date)}\n\n`
+            `Company: ${job.organization_name || 'N/A'}\n` +
+            `Location: ${job.working_location || 'Remote'}\n` +
+            `Required Skills: ${job.required_skills?.map(s => s.name).join(', ') || 'N/A'}\n` +
+            `Optional Skills: ${job.optional_skills?.map(s => s.name).join(', ') || 'N/A'}\n` +
+            `Created: ${getTimeAgo(job.created_at)}\n\n`
         ).join('');
 
         if (jobs.length > 0) {
